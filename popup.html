@@ -1,36 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>Hide</title>
-  <link rel="stylesheet" href="popup.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
+
   <div class="container">
+
+    <!-- Header -->
     <div class="brand">
       <span class="brand-name">HIDE</span>
       <span class="brand-dot"></span>
     </div>
 
+    <!-- Main toggle button -->
     <div class="button-wrapper">
-      <button id="toggleBtn" class="hide-btn" aria-label="Toggle sensitive field masking">
+      <button
+        id="toggleBtn"
+        class="hide-btn"
+        aria-label="Toggle masking"
+      >
         <span class="btn-label">Hide</span>
-        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
-          <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
-          <line x1="1" y1="1" x2="23" y2="23" />
+
+        <svg
+          class="btn-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"></path>
+          <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
         </svg>
       </button>
+
       <div class="pulse-ring"></div>
     </div>
 
-    <p class="status-text" id="statusText">Click to mask sensitive fields</p>
+    <!-- Status text -->
+    <p id="statusText" class="status-text">
+      Click to hide fields
+    </p>
 
+    <!-- Info section -->
     <div class="info-bar" id="infoBar">
       <span class="info-icon">⚡</span>
-      <span id="fieldCount">Scanning…</span>
+      <span id="fieldCount">Scanning...</span>
     </div>
+
   </div>
 
   <script src="popup.js"></script>
