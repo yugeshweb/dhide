@@ -1,6 +1,5 @@
 // content.js
-// Blurs all form fields + iframes on the page.
-// State lives only while this content script is active.
+// Blurs sensitive interactive fields only (not static labels)
 
 (() => {
   if (window.__hideExtensionLoaded) return;
@@ -8,10 +7,6 @@
 
   const BLUR_CLASS = "__hide_blurred";
   const STYLE_ID = "__hide_blur_style";
-
-  const savedValues = new Map();     // input -> real value
-  const cleanupFns = new Map();      // input -> remove listener
-  const blurredIframes = new Set();
 
   let observer = null;
   let active = false;
@@ -32,66 +27,59 @@
   }
 
   function removeStyles() {
-    const style = document.getElementById(STYLE_ID);
-    if (style) style.remove();
+    document.getElementById(STYLE_ID)?.remove();
   }
 
-  function mask(el) {
-    if (savedValues.has(el)) return;
+  function shouldBlur(el) {
+    const tag = el.tagName.toLowerCase();
 
-    savedValues.set(el, el.value);
-
-    if (el.value) {
-      el.value = "*".repeat(el.value.length);
+    // Real form controls
+    if (tag === "input" || tag === "textarea" || tag === "select") {
+      return true;
     }
 
-    const handler = () => {
-      const current = el.value;
-      savedValues.set(el, current);
-      el.value = "*".repeat(current.length);
-    };
+    // Stripe-style fake inputs
+    if (
+      el.getAttribute("role") === "textbox" ||
+      el.contentEditable === "true"
+    ) {
+      return true;
+    }
 
-    el.addEventListener("input", handler, true);
-    cleanupFns.set(el, () => {
-      el.removeEventListener("input", handler, true);
-    });
+    return false;
   }
 
-  function unmask(el) {
-    if (!savedValues.has(el)) return;
+  function blurFields(root = document) {
+    const all = root.querySelectorAll("*");
 
-    el.value = savedValues.get(el) || "";
-    savedValues.delete(el);
-
-    const cleanup = cleanupFns.get(el);
-    if (cleanup) cleanup();
-    cleanupFns.delete(el);
-  }
-
-  function scan(root = document) {
-    const fields = root.querySelectorAll("input, textarea, select");
-    fields.forEach(mask);
-  }
-
-  function blurIframes() {
-    document.querySelectorAll("iframe").forEach(frame => {
-      if (!blurredIframes.has(frame)) {
-        frame.classList.add(BLUR_CLASS);
-        blurredIframes.add(frame);
+    all.forEach(el => {
+      if (shouldBlur(el)) {
+        el.classList.add(BLUR_CLASS);
       }
     });
   }
 
+  function unblurFields() {
+    document
+      .querySelectorAll(`.${BLUR_CLASS}`)
+      .forEach(el => el.classList.remove(BLUR_CLASS));
+  }
+
+  function blurIframes() {
+    document.querySelectorAll("iframe").forEach(frame => {
+      frame.classList.add(BLUR_CLASS);
+    });
+  }
+
   function unblurIframes() {
-    blurredIframes.forEach(frame => {
+    document.querySelectorAll("iframe").forEach(frame => {
       frame.classList.remove(BLUR_CLASS);
     });
-    blurredIframes.clear();
   }
 
   function startWatching() {
     observer = new MutationObserver(() => {
-      scan();
+      blurFields();
       blurIframes();
     });
 
@@ -110,7 +98,7 @@
 
   function enable() {
     addStyles();
-    scan();
+    blurFields();
     blurIframes();
     startWatching();
     active = true;
@@ -118,14 +106,16 @@
 
   function disable() {
     stopWatching();
-    Array.from(savedValues.keys()).forEach(unmask);
+    unblurFields();
     unblurIframes();
     removeStyles();
     active = false;
   }
 
   function getCount() {
-    return savedValues.size + blurredIframes.size;
+    return document.querySelectorAll(
+      "input, textarea, select, iframe, [role='textbox'], [contenteditable='true']"
+    ).length;
   }
 
   chrome.runtime.onMessage.addListener((msg, _, sendResponse) => {
@@ -146,10 +136,12 @@
     }
   });
 
-  // Clean up when navigating away
-  window.addEventListener("pagehide", () => {
-    if (active) disable();
-    window.__hideExtensionLoaded = false;
-  }, { once: true });
-
+  window.addEventListener(
+    "pagehide",
+    () => {
+      if (active) disable();
+      window.__hideExtensionLoaded = false;
+    },
+    { once: true }
+  );
 })();
