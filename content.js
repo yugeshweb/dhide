@@ -1,5 +1,5 @@
 // content.js
-// Blurs sensitive interactive fields only (not static labels)
+// Blurs only real interactive fields (no static text elements)
 
 (() => {
   if (window.__hideExtensionLoaded) return;
@@ -30,32 +30,17 @@
     document.getElementById(STYLE_ID)?.remove();
   }
 
-  function shouldBlur(el) {
-    const tag = el.tagName.toLowerCase();
-
-    // Real form controls
-    if (tag === "input" || tag === "textarea" || tag === "select") {
-      return true;
-    }
-
-    // Stripe-style fake inputs
-    if (
-      el.getAttribute("role") === "textbox" ||
-      el.contentEditable === "true"
-    ) {
-      return true;
-    }
-
-    return false;
-  }
-
   function blurFields(root = document) {
-    const all = root.querySelectorAll("*");
+    const elements = root.querySelectorAll(`
+      input,
+      textarea,
+      select,
+      [contenteditable="true"],
+      [role="textbox"]
+    `);
 
-    all.forEach(el => {
-      if (shouldBlur(el)) {
-        el.classList.add(BLUR_CLASS);
-      }
+    elements.forEach(el => {
+      el.classList.add(BLUR_CLASS);
     });
   }
 
@@ -78,8 +63,29 @@
   }
 
   function startWatching() {
-    observer = new MutationObserver(() => {
-      blurFields();
+    observer = new MutationObserver(mutations => {
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType !== 1) return;
+
+          // If the node itself is interactive
+          if (
+            node.matches?.(`
+              input,
+              textarea,
+              select,
+              [contenteditable="true"],
+              [role="textbox"]
+            `)
+          ) {
+            node.classList.add(BLUR_CLASS);
+          }
+
+          // Also scan inside it
+          blurFields(node);
+        });
+      }
+
       blurIframes();
     });
 
@@ -113,9 +119,14 @@
   }
 
   function getCount() {
-    return document.querySelectorAll(
-      "input, textarea, select, iframe, [role='textbox'], [contenteditable='true']"
-    ).length;
+    return document.querySelectorAll(`
+      input,
+      textarea,
+      select,
+      iframe,
+      [contenteditable="true"],
+      [role="textbox"]
+    `).length;
   }
 
   chrome.runtime.onMessage.addListener((msg, _, sendResponse) => {
